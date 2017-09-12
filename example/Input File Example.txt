@@ -1,0 +1,4 @@
+1285550,edgar/data/1285550/000143774915005283/Financial_Report.xlsx
+1259515,edgar/data/1259515/000110465915012580/Financial_Report.xlsx
+351789,edgar/data/351789/000089710115000350/Financial_Report.xlsx
+13372,edgar/data/13372/000007274115000013/Financial_Report.xlsx
