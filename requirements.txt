@@ -1,0 +1,7 @@
+get==0.0.21
+pkg-resources==0.0.0
+post==0.0.13
+public==0.0.38
+query-string==0.0.12
+request==0.0.13
+setupfiles==0.0.50
