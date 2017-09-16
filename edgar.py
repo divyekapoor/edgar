@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import csv
+from typing import List
+
 import requests
 import logging
 import sys
@@ -23,14 +25,32 @@ USAGE = """
         1259515,edgar/data/1259515/000110465915012580/Financial_Report.xlsx
         351789,edgar/data/351789/000089710115000350/Financial_Report.xlsx
         13372,edgar/data/13372/000007274115000013/Financial_Report.xlsx
+        ...
+        
+        Sample output CSV:
+        ==================
+        ID,Sheet,Policy,Text
+        13372,Description_of_Business,About,"NU Consolidated: NU is a public..."
+        13372,Description_of_Business,Basis of Presentation,"The consolidate..."
+        13372,Description_of_Business,Accounting Standards,"Recently Adopted..."
+        13372,Description_of_Business,Cash and Cash Equivalents,"Cash and ..."
+        ...
         
         """
 
 logger = logging.getLogger('main')
 
+
 def usage():
     print(USAGE)
     sys.stdout.flush()
+
+
+class OutputRow:
+    def __init__(self, id_value: str, policy: str, text: str):
+        self.id = id_value
+        self.policy = policy
+        self.text = text
 
 
 class InputRow:
@@ -50,6 +70,18 @@ class InputRow:
                 fd.write(chunk)
         self.xls_file = filename
         logger.info('Fetched %s', self.xls_file)
+
+    def get_accounting_policies(self) -> List[OutputRow]:
+        logger.info('Processing accounting policy for %s', self)
+        results = []
+        workbook = openpyxl.load_workbook(self.xls_file)
+        top_sheets = sorted(
+            [(len(list(worksheet.values)), index, worksheet.title)
+             for index, worksheet in enumerate(workbook.worksheets)],
+            reverse=True)
+        logger.info('Top sheets: %s', top_sheets)
+
+        return results
 
     def __str__(self):
         return '({}, {})'.format(self.id, self.edgar_url)
@@ -86,7 +118,10 @@ def main():
         sys.exit(1)
 
     logger.info('Creating directories if not present: %s', options.workdir)
-    os.makedirs(options.workdir)
+    try:
+        os.makedirs(options.workdir)
+    except FileExistsError as e:
+        logger.info('Directory already present.')
 
     with open(options.input, 'r') as input_csv:
         reader = csv.DictReader(input_csv)
@@ -94,7 +129,7 @@ def main():
         logger.info('Inputs: %s', inputs)
         for input in inputs:
             input.fetch_file(options.workdir)
-
+            input.get_accounting_policies()
 
 
 if __name__ == '__main__':
