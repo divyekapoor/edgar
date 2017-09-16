@@ -48,16 +48,62 @@ def usage():
 
 
 class OutputRow:
-    def __init__(self, id_value: str, policy: str, text: str):
+    def __init__(self, id_value: str, sheet_name: str, policy: str, text: str):
         self.id = id_value
+        self.sheet_name = sheet_name
         self.policy = policy
         self.text = text
+
+    def get_dict(self):
+        return {
+            'ID': self.id,
+            'Sheet': self.sheet_name,
+            'Policy': self.policy,
+            'Text': self.text
+        }
+
+
+class OutputCSV:
+    def __init__(self, file_name: str, rows: List[OutputRow]):
+        self.file_name = file_name
+        self.rows = rows
+
+    def write(self):
+        logger.info('Writing accounting policies to %s', self.file_name)
+        with open(self.file_name, 'w') as output_csv_file:
+            dict_writer = csv.DictWriter(
+                output_csv_file, fieldnames=["ID", "Sheet", "Policy", "Text"])
+            dict_writer.writeheader()
+            for row in self.rows:
+                dict_writer.writerow(row.get_dict())
+        logger.info('Written %d rows', len(self.rows))
+
+
+class AccountingPolicy:
+    def __init__(self,
+                 id_value: str,
+                 sheet_name: str,
+                 policy_name: str,
+                 policy_values: List[str]):
+        self.id = id_value
+        self.sheet_name = sheet_name
+        self.policy_name = policy_name
+        self.policy_values = policy_values
+
+    def get_output_row(self):
+        return OutputRow(self.id, self.sheet_name, self.policy_name,
+                         ''.join(self.policy_values))
 
 
 @total_ordering
 class XLSWorksheet:
-    def __init__(self, worksheet_index: int,
+    def __init__(self,
+                 id_value: str,
+                 workbook: openpyxl.Workbook,
+                 worksheet_index: int,
                  worksheet: openpyxl.worksheet.Worksheet):
+        self.id = id_value
+        self.workbook = workbook
         self.worksheet = worksheet
         self.rows = list(worksheet.values)
         self.num_rows = len(self.rows)
@@ -101,11 +147,60 @@ class XLSWorksheet:
                     return True
         return False
 
+    def extract_accounting_policies(self) -> List[AccountingPolicy]:
+        accounting_policies = []
+        current_accounting_policy = None
+        # Start from the 4th row.
+        for row in self.rows_without_tables[4:]:
+            b_column_value = row[1]
+            if b_column_value is None or not isinstance(b_column_value, str):
+                continue
+            if self._isHeader(b_column_value):
+                if current_accounting_policy is None:
+                    current_accounting_policy = AccountingPolicy(
+                        self.id,
+                        self.worksheet.title,
+                        b_column_value, [])
+                else:
+                    accounting_policies.append(current_accounting_policy)
+                    current_accounting_policy = AccountingPolicy(
+                        self.id,
+                        self.worksheet.title,
+                        b_column_value, [])
+            else:
+                if current_accounting_policy is None:
+                    current_accounting_policy = AccountingPolicy(
+                        self.id,
+                        self.worksheet.title,
+                        'Preamble',
+                        [b_column_value])
+                else:
+                    current_accounting_policy.policy_values.append(
+                        b_column_value)
+        if current_accounting_policy is not None:
+            accounting_policies.append(current_accounting_policy)
+        return accounting_policies
+
     def _allColumnsAfterBAreNone(self, row):
         slice = row[2:]
         for entry in slice:
             if entry is not None:
                 return False
+        return True
+
+    def _isHeader(self, b_column_value: str):
+        """
+        Sensitive piece of code:
+         The choice of parameter for the number of words here determines 
+         whether we will get all the accounting policies or miss a few.
+         
+        The current parameter value is 8 which is short enough to capture 
+        most headings while excluding short sentences before tables. This 
+        value is tweakable. 
+        """
+        if len(b_column_value.split(' ', 9)) > 8:
+            return False
+
         return True
 
     def __str__(self):
@@ -143,12 +238,11 @@ class InputRow:
         self.xls_file = filename
         logger.info('Fetched %s', self.xls_file)
 
-    def get_accounting_policies(self) -> List[OutputRow]:
+    def get_accounting_policies(self) -> List[AccountingPolicy]:
         logger.info('Processing accounting policy for %s', self)
-        results = []
         workbook = openpyxl.load_workbook(self.xls_file)
         top_sheets = sorted(
-            [XLSWorksheet(index, worksheet)
+            [XLSWorksheet(self.id, workbook, index, worksheet)
              for index, worksheet in enumerate(workbook.worksheets)],
             reverse=True)
         logger.info('Top sheets: %s', top_sheets)
@@ -156,7 +250,9 @@ class InputRow:
             worksheet for worksheet in top_sheets
             if worksheet.is_summary_of_accounting_policies_sheet()]
         logger.info('Accounting Policy sheets: %s', accounting_policy_sheets)
-
+        results = []
+        for worksheet in accounting_policy_sheets:
+            results.extend(worksheet.extract_accounting_policies())
         return results
 
     def __str__(self):
@@ -177,8 +273,8 @@ def main():
                       help='CSV file that provides an ID and an '
                            'Edgar URL to fetch financial information '
                            'for companies.')
-    parser.add_option('-o', '--output', dest='output',
-                      help='CSV file name where Summary of Accounting '
+    parser.add_option('-o', '--outputdir', dest='outputdir',
+                      help='Output directory where Summary of Accounting '
                            'policies will be extracted.')
     parser.add_option('-w', '--workdir', dest='workdir',
                       help='The working directory to use for saving '
@@ -188,26 +284,45 @@ def main():
 
     logger.info('Options: %s', options)
 
-    if options.input is None or options.output is None or \
+    if options.input is None or options.outputdir is None or \
                     options.workdir is None:
         usage()
         sys.exit(1)
 
-    logger.info('Creating directories if not present: %s', options.workdir)
-    try:
-        os.makedirs(options.workdir)
-    except FileExistsError as e:
-        logger.info('Directory already present.')
+    create_dir(options.workdir)
+    create_dir(options.outputdir)
+
+    requests_cache.install_cache(os.path.abspath(os.path.join(
+        options.workdir, 'requests_cache')))
 
     with open(options.input, 'r') as input_csv:
         reader = csv.DictReader(input_csv)
         inputs = [InputRow(record['ID'], record['URL']) for record in reader]
         logger.info('Inputs: %s', inputs)
-        for input in inputs:
-            requests_cache.install_cache(os.path.abspath(os.path.join(
-                options.workdir, 'requests_cache')))
-            input.fetch_file(options.workdir)
-            input.get_accounting_policies()
+        master_csv_output_rows = []
+        for input_row in inputs:
+            input_row.fetch_file(options.workdir)
+            accounting_policies = input_row.get_accounting_policies()
+            output_csv_file_name = os.path.abspath(os.path.join(
+                options.outputdir, input_row.id + ".csv"))
+            output_rows = [policy.get_output_row() for policy in
+                           accounting_policies]
+            output_csv = OutputCSV(output_csv_file_name, output_rows)
+            output_csv.write()
+            master_csv_output_rows.extend(output_rows)
+        master_csv_file_name = os.path.abspath(os.path.join(
+            options.outputdir, 'master.csv'))
+        master_csv = OutputCSV(
+            master_csv_file_name, master_csv_output_rows)
+        master_csv.write()
+
+
+def create_dir(directory_name):
+    logger.info('Creating directories if not present: %s', directory_name)
+    try:
+        os.makedirs(directory_name)
+    except FileExistsError as e:
+        logger.info('Directory already present: %s', directory_name)
 
 
 if __name__ == '__main__':
