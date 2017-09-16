@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 import csv
-from typing import List
-
-import requests
 import logging
-import sys
 import os
-import gflags
-import openpyxl
-from logging import INFO, ERROR, WARN, WARNING
+import sys
 from optparse import OptionParser
+
+import openpyxl
+import requests
+from typing import List
 
 USAGE = """
         Edgar Summary of Accounting Policies Extractor
