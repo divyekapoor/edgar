@@ -79,6 +79,7 @@ class InputRow:
             reverse=True)
         logger.info('Top sheets: %s', top_sheets)
 
+
         return results
 
     def __str__(self):
