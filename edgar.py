@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+#
+# Author: Divye Kapoor (divyekapoor@gmail.com)
+# Date: Sept 16, 2017
+# Upwork Contract: https://www.upwork.com/d/contracts/18729685
+#
+# Code Tested with Python 3.5.3
+#
 import csv
 import logging
 import os
@@ -39,7 +46,7 @@ USAGE = """
         
         """
 
-logger = logging.getLogger('main')
+logger = logging.getLogger(__name__)
 
 
 def usage():
