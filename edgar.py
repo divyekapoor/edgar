@@ -23,7 +23,7 @@ USAGE = """
         Edgar Summary of Accounting Policies Extractor
         
         Usage: python3 edgar.py --input input.csv \ 
-                    --output accounting_policies.csv
+                    --output accounting_policies.csv \ 
                     --workdir download_directory
                     
         Sample input CSV:
