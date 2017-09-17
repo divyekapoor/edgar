@@ -5,6 +5,7 @@ financial statements also include a summary of accounting policies used to deter
 how and where money / assets will be recorded in their financial statements.
 
 The edgar script extracts the "Summary of Accounting Policies" from Edgar Online XSLX files.
+Examples can be found in the samples/ and examples/ directories.
 
    ```sh
         Edgar Summary of Accounting Policies Extractor
