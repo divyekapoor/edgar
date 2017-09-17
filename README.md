@@ -1,11 +1,10 @@
 # Edgar
-Converting and Extracting Summary of Statement of Accounts from Edgar Online XSLX files.
+Most companies that file financial reporting documents in the US have an XSLX file
+on Edgar Online that details its financial statements as filed with the SEC. These
+financial statements also include a summary of accounting policies used to determine
+how and where money / assets will be recorded in their financial statements.
 
-# Requirements
-
-This code requires Python 3 (tested Python 3.6.5) and certain third party modules (listed in requirements.txt).
-
-# Capabilities
+The edgar script extracts the "Summary of Accounting Policies" from Edgar Online XSLX files.
 
    ```sh
         Edgar Summary of Accounting Policies Extractor
@@ -98,6 +97,7 @@ To build the zip file used for windows distribution, please run:
    ```sh
    $ make
    ```
+edgar.zip will be built in the build/ directory.
 
 To clean up,
    ```sh
@@ -109,4 +109,5 @@ To clean up,
 For Windows, we require the latest version of Python 3 and Git installed on the system.
 Please download them from <https://www.python.org/downloads/windows/> and <https://git-scm.com/download/win>
 
-
+It should be possible to build and run the code on Windows as well with Git + Python + Make installed, 
+but this has not been verified.
