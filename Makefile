@@ -5,6 +5,7 @@ build/edgar.zip: edgar.py clean
 	cp -r venv/lib/python3.5/site-packages/* build/edgar/
 	cp README.md build/edgar/
 	cd build && zip -r edgar.zip edgar/*
+	cp build/edgar.zip ./
 
 clean:
 	rm -rf build
