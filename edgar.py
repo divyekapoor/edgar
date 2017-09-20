@@ -8,6 +8,7 @@
 #
 import csv
 import logging
+import logging.config
 import os
 import sys
 from functools import total_ordering
@@ -21,11 +22,11 @@ from openpyxl.worksheet import Worksheet
 
 USAGE = """
         Edgar Summary of Accounting Policies Extractor
-        
+
         Usage: python3 edgar.py --input input.csv \ 
                     --output accounting_policies.csv \ 
                     --workdir download_directory
-                    
+
         Sample input CSV:
         =================
         ID,URL
@@ -34,7 +35,7 @@ USAGE = """
         351789,edgar/data/351789/000089710115000350/Financial_Report.xlsx
         13372,edgar/data/13372/000007274115000013/Financial_Report.xlsx
         ...
-        
+
         Sample output CSV:
         ==================
         ID,Sheet,Policy,Text
@@ -43,7 +44,7 @@ USAGE = """
         13372,Description_of_Business,Accounting Standards,"Recently Adopted..."
         13372,Description_of_Business,Cash and Cash Equivalents,"Cash and ..."
         ...
-        
+
         """
 
 logger = logging.getLogger(__name__)
@@ -123,16 +124,16 @@ class XLSWorksheet:
         """
         Heuristics for detecting the summary of accounting policy sheet.
         We might be wrong (sometimes).
-        
+
         1. Sheet must have more than 50 rows. 50 is tweakable.
         2. Sheet must have more than 50 non table rows. 50 is tweakable.
-        3. First 10 rows must contain "Summary of Significant Accounting 
+        3. First 10 rows must contain "Summary of Significant Accounting
         Policies". 10 is tweakable.
-        4. First 10 rows must contain "Significant Accounting Policies". 10 
+        4. First 10 rows must contain "Significant Accounting Policies". 10
         is tweakable.
-        
-        In all the examples, I've seen that the term is present in the first 
-        4 or 5 rows. 
+
+        In all the examples, I've seen that the term is present in the first
+        4 or 5 rows.
         """
         if self.num_rows < 50:
             return False
@@ -198,12 +199,12 @@ class XLSWorksheet:
     def _isHeader(self, b_column_value: str):
         """
         Sensitive piece of code:
-         The choice of parameter for the number of words here determines 
+         The choice of parameter for the number of words here determines
          whether we will get all the accounting policies or miss a few.
-         
-        The current parameter value is 8 which is short enough to capture 
-        most headings while excluding short sentences before tables. This 
-        value is tweakable. 
+
+        The current parameter value is 8 which is short enough to capture
+        most headings while excluding short sentences before tables. This
+        value is tweakable.
         """
         if len(b_column_value.split(' ', 9)) > 8:
             return False
@@ -299,6 +300,50 @@ def main():
     create_dir(options.workdir)
     create_dir(options.outputdir)
 
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'basic': {
+                'class': 'logging.Formatter',
+                'format': '%(asctime)s %(name)-8s %(levelname)-6s %(message)s'
+            }
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'level': 'INFO',
+                'formatter': 'basic'
+            },
+            'file_info': {
+                'class': 'logging.FileHandler',
+                'level': 'INFO',
+                'filename': os.path.abspath(os.path.join(options.outputdir,
+                                                         'edgar_info.log')),
+                'mode': 'w',
+                'formatter': 'basic'
+            },
+            'file_errors': {
+                'class': 'logging.FileHandler',
+                'level': 'ERROR',
+                'filename': os.path.abspath(os.path.join(options.outputdir,
+                                                         'edgar_errors.log')),
+                'mode': 'w',
+                'formatter': 'basic'
+            }
+        },
+        'loggers': {
+          '__main__': {
+              'handlers': ['console', 'file_info', 'file_errors'],
+              'propagate': False,
+          }
+        },
+        'root': {
+            'level': 'INFO',
+            'handlers': ['console', 'file_info', 'file_errors']
+        }
+    })
+
     requests_cache.install_cache(os.path.abspath(os.path.join(
         options.workdir, 'requests_cache')))
 
@@ -308,20 +353,30 @@ def main():
         logger.info('Inputs: %s', inputs)
         master_csv_output_rows = []
         for input_row in inputs:
-            input_row.fetch_file(options.workdir)
-            accounting_policies = input_row.get_accounting_policies()
-            output_csv_file_name = os.path.abspath(os.path.join(
-                options.outputdir, input_row.id + ".csv"))
-            output_rows = [policy.get_output_row() for policy in
-                           accounting_policies]
-            output_csv = OutputCSV(output_csv_file_name, output_rows)
-            output_csv.write()
-            master_csv_output_rows.extend(output_rows)
+            try:
+                input_row.fetch_file(options.workdir)
+                accounting_policies = input_row.get_accounting_policies()
+                output_csv_file_name = os.path.abspath(os.path.join(
+                    options.outputdir, input_row.id + ".csv"))
+                output_rows = [policy.get_output_row() for policy in
+                               accounting_policies]
+                output_csv = OutputCSV(output_csv_file_name, output_rows)
+                output_csv.write()
+                master_csv_output_rows.extend(output_rows)
+            except Exception as e:
+                logger.error('Exception during processing of %s: %s',
+                             input_row, e)
         master_csv_file_name = os.path.abspath(os.path.join(
             options.outputdir, 'master.csv'))
-        master_csv = OutputCSV(
-            master_csv_file_name, master_csv_output_rows)
-        master_csv.write()
+        logger.info('Writing master csv to %s', master_csv_file_name)
+        try:
+            master_csv = OutputCSV(
+                master_csv_file_name, master_csv_output_rows)
+            master_csv.write()
+        except Exception as e:
+            logger.error('Exception during processing of %s: %s',
+                         master_csv_file_name, e)
+    logger.info('All done.')
 
 
 def create_dir(directory_name):
