@@ -85,6 +85,8 @@ class OutputCSV:
             for row in self.rows:
                 dict_writer.writerow(row.get_dict())
         logger.info('Written %d rows', len(self.rows))
+        if len(self.rows) == 0:
+            logger.error('No rows written to file %s', self.file_name)
 
 
 class AccountingPolicy:
