@@ -367,7 +367,7 @@ def main():
                 master_csv_output_rows.extend(output_rows)
             except Exception as e:
                 logger.error('Exception during processing of %s: %s',
-                             input_row, e)
+                             input_row, e, exc_info=1)
         master_csv_file_name = os.path.abspath(os.path.join(
             options.outputdir, 'master.csv'))
         logger.info('Writing master csv to %s', master_csv_file_name)
@@ -377,7 +377,7 @@ def main():
             master_csv.write()
         except Exception as e:
             logger.error('Exception during processing of %s: %s',
-                         master_csv_file_name, e)
+                         master_csv_file_name, e, exc_info=1)
     logger.info('All done.')
 
 
