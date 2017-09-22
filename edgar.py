@@ -10,6 +10,7 @@ import csv
 import logging
 import logging.config
 import os
+import re
 import sys
 from functools import total_ordering
 from optparse import OptionParser
@@ -101,8 +102,10 @@ class AccountingPolicy:
         self.policy_values = policy_values
 
     def get_output_row(self):
+        policy_text = ' '.join(self.policy_values)
+        policy_text = re.sub('[^a-zA-Z0-9.$ ]+', '', policy_text)
         return OutputRow(self.id, self.sheet_name, self.policy_name,
-                         ''.join(self.policy_values))
+                         policy_text)
 
 
 @total_ordering
@@ -209,6 +212,9 @@ class XLSWorksheet:
         value is tweakable.
         """
         if len(b_column_value.split(' ', 9)) > 8:
+            return False
+        if 'year' in b_column_value \
+                or '$' in b_column_value:
             return False
 
         return True
