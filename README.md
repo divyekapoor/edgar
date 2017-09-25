@@ -71,6 +71,13 @@ Running on sample input data:
    $ python3 edgar.py -i samples/input.txt -o samples/output -w samples/workdir
    ```
 
+## Handling .xls files
+
+The following need to be installed to handle .xls files in addition to .xlsx files (supported only on Windows):
+
+  * The Office Compatibility Pack <http://go.microsoft.com/fwlink/p/?LinkID=77512>
+  * The Office Migration Planning Manager <https://www.microsoft.com/en-us/download/details.aspx?id=11454>
+
 
 # Developer Instructions: How to build
 
