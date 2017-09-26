@@ -119,3 +119,13 @@ Please download them from <https://www.python.org/downloads/windows/> and <https
 
 It should be possible to build and run the code on Windows as well with Git + Python + Make installed, 
 but this has not been verified.
+
+# Release Instructions
+
+## Linux
+
+The best way to release a new piece of code is to call
+```make release``` and a release will be created and tagged.
+
+Dependencies:
+<https://github.com/flazz/semver> for semantic version management.
