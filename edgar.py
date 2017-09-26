@@ -53,7 +53,7 @@ USAGE = """
 #
 # For converting between XLS and XLSX formats.
 #
-OFC_INI = """
+OFC_INI = r"""
 [Run]
 LogDestinationPath={log_destination}
 Description= "{description}"
@@ -77,7 +77,6 @@ MacroControl=0
 ; The Converter will attempt to convert all supported files in the specified folders
 ; (do not include if specifying FileListFolder)
 ;fldr=C:\Documents and Settings\Administrator\My Documents
-;fldr=\\server\share\docs
 fldr={input_folder}
 
 [ConversionInfo]
@@ -88,11 +87,11 @@ fldr={input_folder}
 ; The converted file will be saved at: DestinationPathTemplate + Remaining uncaptured source path
 ;
 ; For example:
-;    Source files are contained in \\userfiles\[user name]\docs\
-;    Desired output is to          \\newserver\docs\[user name]\
+;    Source files are contained in \\userfiles\[user name]\docs
+;    Desired output is to          \\newserver\docs\[user name]
 ;
 ; The following settings would enable this example scenario:
-;    SourcePathTemplate = *\*\*\
+;    SourcePathTemplate = *\*\*\ (3 levels deep)
 ;    DestinationPathTemplate = \\newserver\*3\*2
 ; Explanation: The first three folder names are captured in order ("*X" designates which captured folder name to use):
 ;    *1 = userfiles

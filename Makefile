@@ -1,5 +1,8 @@
 SOURCES:=edgar.py edgar.bat
 
+test: $(SOURCES)
+	python3 edgar.py -i example/input.txt -w $(shell mktemp -d) -o $(shell mktemp -d)
+
 build/edgar.zip: $(SOURCES) clean
 	mkdir -p build/edgar
 	cp $(SOURCES) build/edgar/
@@ -19,4 +22,4 @@ clean:
 	rm -rf build
 	rm -f edgar.zip
 
-.PHONY: clean
+.PHONY: clean test release
