@@ -12,6 +12,7 @@ import logging.config
 import os
 import platform
 import re
+import subprocess
 import sys
 import shutil
 import zipfile
@@ -318,11 +319,11 @@ class InputRow:
         with open(ofc_ini_file_path, 'w') as ofc_file:
             ofc_file.write(ofc_ini_file_contents)
         logger.info('Executing ofc.exe')
-        ofc_output = os.subprocess.check_output(
+        ofc_output = subprocess.check_output(
             ['C:\OMPM\TOOLS\ofc.exe', ofc_ini_file_path],
             shell=True,
             universal_newlines=True,
-            stderr=os.subprocess.STDOUT)
+            stderr=subprocess.STDOUT)
         logger.info('OFC output: {}'.format(ofc_output))
         all_converted_files = os.listdir(target_dir)
         logger.info('All Converted Files: {}', all_converted_files)
