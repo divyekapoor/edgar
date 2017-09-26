@@ -10,7 +10,7 @@ build/edgar.zip: edgar.py clean
 release: build/edgar.zip
 	semver inc patch
 	git commit -am "Releasing $(shell semver tag)"
-	git tag -a $(shell semver tag)
+	git tag -a $(shell semver tag) -m 'Release Tag: $(shell semver tag)'
 
 clean:
 	rm -rf build
