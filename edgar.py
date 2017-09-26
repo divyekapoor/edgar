@@ -12,6 +12,8 @@ import logging.config
 import os
 import re
 import sys
+import shutil
+import zipfile
 from functools import total_ordering
 from optparse import OptionParser
 
@@ -48,12 +50,79 @@ USAGE = """
 
         """
 
+#
+# For converting between XLS and XLSX formats.
+#
+OFC_INI = """
+[Run]
+LogDestinationPath={log_destination}
+Description= "{description}"
+
+; TimeOut: a limit in seconds for the conversion of a single file. (default 300 seconds)
+; If expired, the Office File Converter will cancel the conversion of the current file and move on to the next file.
+; Conversion will never timeout if this value is set to 0.
+; Set to a higher value if experiencing difficulties with larger files.
+TimeOut = 300
+
+[ConversionOptions]
+; CABLogs: if set to 1 (default), XML log files will be compressed into CAB files
+;          if set to 0, XML log files will be written separately
+CABLogs=0
+
+; MacroControl: if set to 1, VBA projects will not be included in converted files
+;               if set to 0 (default), VBA projects will be maintained in the converted files
+MacroControl=0
+
+[FoldersToConvert]
+; The Converter will attempt to convert all supported files in the specified folders
+; (do not include if specifying FileListFolder)
+;fldr=C:\Documents and Settings\Administrator\My Documents
+;fldr=\\server\share\docs
+fldr={input_folder}
+
+[ConversionInfo]
+; Use SourcePathTemplate and DestinationPathTemplate to specify the destination folder structure.
+
+; SourcePathTemplate: a sequence of E\E that determines how many directories from the source path will be captured.
+; DestinationPathTemplate: path where converted files will be saved, possibly including captured folder names from the SourcePathTemplate
+; The converted file will be saved at: DestinationPathTemplate + Remaining uncaptured source path
+;
+; For example:
+;    Source files are contained in \\userfiles\[user name]\docs\
+;    Desired output is to          \\newserver\docs\[user name]\
+;
+; The following settings would enable this example scenario:
+;    SourcePathTemplate = *\*\*\
+;    DestinationPathTemplate = \\newserver\*3\*2
+; Explanation: The first three folder names are captured in order ("*X" designates which captured folder name to use):
+;    *1 = userfiles
+;    *2 = [user name]
+;    *3 = docs
+;  Here are some sample file source files and converted files for this example:
+;    \\userfiles\Bob\docs\Personal\Rept1.doc         =>   \\newserver\docs\Bob\Personal\Rept1.docx
+;    \\userfiles\James\docs\New Folder\Schedule.doc  =>   \\newserver\docs\James\New Folder\Schedule.docx
+;    \\userfiles\Cliff\docs\notes.doc                =>   \\newserver\docs\Cliff\notes.docx
+;
+; Please refer to the online documentation for more information and examples.
+
+SourcePathTemplate=*\ 
+DestinationPathTemplate={output_folder}
+        """
+
 logger = logging.getLogger(__name__)
 
 
 def usage():
     print(USAGE)
     sys.stdout.flush()
+
+
+def create_dir(directory_name):
+    logger.info('Creating directories if not present: %s', directory_name)
+    try:
+        os.makedirs(directory_name)
+    except FileExistsError as e:
+        logger.info('Directory already present: %s', directory_name)
 
 
 class OutputRow:
@@ -244,8 +313,10 @@ class InputRow:
 
     def fetch_file(self, working_dir: str):
         fully_qualified_url = 'https://www.sec.gov/Archives/' + self.edgar_url
+        filename_from_url, extension = os.path.splitext(self.edgar_url)
         filename = os.path.abspath(
-            os.path.join(working_dir, 'Financial_Report_' + self.id + '.xlsx'))
+            os.path.join(
+                working_dir, 'Financial_Report_' + self.id + extension))
         logger.info('Starting fetch for %s', fully_qualified_url)
         r = requests.get(fully_qualified_url)
         with open(filename, 'wb') as fd:
@@ -253,6 +324,55 @@ class InputRow:
                 fd.write(chunk)
         self.xls_file = filename
         logger.info('Fetched %s', self.xls_file)
+        logger.info('Testing whether %s is an XLSX file', self.xls_file)
+        if not zipfile.is_zipfile(self.xls_file):
+            logger.info('%s is not an XLSX file. Trying to convert (Windows '
+                        'only)', self.xls_file)
+            self._convert_xls_to_xlsx(working_dir)
+
+    def _convert_xls_to_xlsx(self, working_dir: str):
+        if not sys.platform == 'Windows':
+            raise NotImplementedError(
+                'XLS to XLSX conversion supported only on Windows.')
+
+        convert_dir = os.path.abspath(
+            os.path.join(working_dir, 'convert_' + str(self.id)))
+        create_dir(convert_dir)
+        target_dir = os.path.abspath(
+            os.path.join(working_dir, 'xlsx_target_dir'))
+        create_dir(target_dir)
+        logger.info('Copying {} to {}'.format(self.xls_file, convert_dir))
+        shutil.copy2(self.xls_file, convert_dir)
+        ofc_ini_file_contents = OFC_INI.format_map({
+            "log_destination": os.path.join(target_dir, 'convert.log'),
+            "description": 'Conversion for {}'.format(self),
+            "input_folder": convert_dir,
+            "output_folder": target_dir
+        })
+        ofc_ini_file_path = os.path.join(convert_dir, 'ofc.ini')
+        logger.info('Writing ofc.ini at {}'.format(ofc_ini_file_path))
+        with open(ofc_ini_file_path) as ofc_file:
+            ofc_file.write(ofc_ini_file_contents)
+        logger.info('Executing ofc.exe')
+        ofc_output = os.subprocess.check_output(
+            ['C:\OMPM\TOOLS\ofc.exe', ofc_ini_file_path],
+            shell=True,
+            universal_newlines=True,
+            stderr=os.subprocess.STDOUT)
+        logger.info('OFC output: {}'.format(ofc_output))
+        all_converted_files = os.listdir(target_dir)
+        logger.info('All Converted Files: {}', all_converted_files)
+        converted_files = [file for file in all_converted_files if
+                           os.path.splitext(file)[1].lower() == 'xlsx']
+        logger.info('Output files: {}. Picking first one if available.'.format(
+            converted_files))
+
+        converted_file = converted_files[0] if len(converted_files) > 0 else \
+            None
+        logger.info('Overwriting {} with {}'.format(
+            self.xls_file, converted_file))
+        shutil.copy2(converted_file, self.xls_file)
+        logger.info('Conversion done.')
 
     def get_accounting_policies(self) -> List[AccountingPolicy]:
         logger.info('Processing accounting policy for %s', self)
@@ -341,10 +461,10 @@ def main():
             }
         },
         'loggers': {
-          '__main__': {
-              'handlers': ['console', 'file_info', 'file_errors'],
-              'propagate': False,
-          }
+            '__main__': {
+                'handlers': ['console', 'file_info', 'file_errors'],
+                'propagate': False,
+            }
         },
         'root': {
             'level': 'INFO',
@@ -385,14 +505,6 @@ def main():
             logger.error('Exception during processing of %s: %s',
                          master_csv_file_name, e, exc_info=1)
     logger.info('All done.')
-
-
-def create_dir(directory_name):
-    logger.info('Creating directories if not present: %s', directory_name)
-    try:
-        os.makedirs(directory_name)
-    except FileExistsError as e:
-        logger.info('Directory already present: %s', directory_name)
 
 
 if __name__ == '__main__':
