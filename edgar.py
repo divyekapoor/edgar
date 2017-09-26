@@ -315,7 +315,7 @@ class InputRow:
         })
         ofc_ini_file_path = os.path.join(convert_dir, 'ofc.ini')
         logger.info('Writing ofc.ini at {}'.format(ofc_ini_file_path))
-        with open(ofc_ini_file_path) as ofc_file:
+        with open(ofc_ini_file_path, 'w') as ofc_file:
             ofc_file.write(ofc_ini_file_contents)
         logger.info('Executing ofc.exe')
         ofc_output = os.subprocess.check_output(
