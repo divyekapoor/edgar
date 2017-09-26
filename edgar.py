@@ -326,18 +326,20 @@ class InputRow:
             stderr=subprocess.STDOUT)
         logger.info('OFC output: {}'.format(ofc_output))
         all_converted_files = os.listdir(target_dir)
-        logger.info('All Converted Files: {}', all_converted_files)
+        logger.info('All Converted Files: {}', str(all_converted_files))
         converted_files = [file for file in all_converted_files if
                            os.path.splitext(file)[1].lower() == 'xlsx']
         logger.info('Output files: {}. Picking first one if available.'.format(
             converted_files))
 
-        converted_file = converted_files[0] if len(converted_files) > 0 else \
-            None
-        logger.info('Overwriting {} with {}'.format(
-            self.xls_file, converted_file))
-        shutil.copy2(converted_file, self.xls_file)
-        logger.info('Conversion done.')
+        if len(converted_files) > 0:
+            converted_file = converted_files[0]
+            logger.info('Overwriting {} with {}'.format(
+                self.xls_file, converted_file))
+            shutil.copy2(converted_file, self.xls_file)
+            logger.info('Conversion done.')
+        else:
+            logger.error('XLS to XLSX Conversion failed.')
 
     def get_accounting_policies(self) -> List[AccountingPolicy]:
         logger.info('Processing accounting policy for %s', self)
