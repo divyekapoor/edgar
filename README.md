@@ -125,7 +125,8 @@ but this has not been verified.
 ## Linux
 
 The best way to release a new piece of code is to call
-```make release``` and a release will be created and tagged.
+```make release``` and a release will be created and tagged. To push the
+release, use ```git push --tags```
 
 Dependencies:
 <https://github.com/flazz/semver> for semantic version management.
