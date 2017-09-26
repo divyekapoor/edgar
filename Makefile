@@ -1,4 +1,4 @@
-build/edgar.zip: edgar.py clean
+build/edgar.zip: edgar.py edgar.bat clean
 	mkdir -p build/edgar
 	cp $< build/edgar/
 	cp -r samples/ build/edgar/
