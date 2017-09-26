@@ -7,6 +7,11 @@ build/edgar.zip: edgar.py clean
 	cd build && zip -r edgar.zip edgar/*
 	cp build/edgar.zip ./
 
+release: build/edgar.zip
+	semver inc patch
+	git commit -am "Releasing $(shell semver tag)"
+	git tag -a $(shell semver tag)
+
 clean:
 	rm -rf build
 	rm -f edgar.zip
