@@ -11,6 +11,7 @@ release: build/edgar.zip
 	semver inc patch
 	git commit -am "Releasing $(shell semver tag)"
 	git tag -a $(shell semver tag) -m 'Release Tag: $(shell semver tag)'
+	@echo "Use git push --tags to push the release to Github."
 
 clean:
 	rm -rf build
