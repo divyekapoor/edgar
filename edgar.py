@@ -52,58 +52,22 @@ USAGE = """
 
 #
 # For converting between XLS and XLSX formats.
+# Please see the attached ofc.ini file for documented explanations.
 #
 OFC_INI = r"""
 [Run]
 LogDestinationPath={log_destination}
 Description= "{description}"
-
-; TimeOut: a limit in seconds for the conversion of a single file. (default 300 seconds)
-; If expired, the Office File Converter will cancel the conversion of the current file and move on to the next file.
-; Conversion will never timeout if this value is set to 0.
-; Set to a higher value if experiencing difficulties with larger files.
 TimeOut = 300
 
 [ConversionOptions]
-; CABLogs: if set to 1 (default), XML log files will be compressed into CAB files
-;          if set to 0, XML log files will be written separately
 CABLogs=0
-
-; MacroControl: if set to 1, VBA projects will not be included in converted files
-;               if set to 0 (default), VBA projects will be maintained in the converted files
 MacroControl=0
 
 [FoldersToConvert]
-; The Converter will attempt to convert all supported files in the specified folders
-; (do not include if specifying FileListFolder)
-;fldr=C:\Documents and Settings\Administrator\My Documents
 fldr={input_folder}
 
 [ConversionInfo]
-; Use SourcePathTemplate and DestinationPathTemplate to specify the destination folder structure.
-
-; SourcePathTemplate: a sequence of E\E that determines how many directories from the source path will be captured.
-; DestinationPathTemplate: path where converted files will be saved, possibly including captured folder names from the SourcePathTemplate
-; The converted file will be saved at: DestinationPathTemplate + Remaining uncaptured source path
-;
-; For example:
-;    Source files are contained in \\userfiles\[user name]\docs
-;    Desired output is to          \\newserver\docs\[user name]
-;
-; The following settings would enable this example scenario:
-;    SourcePathTemplate = *\*\*\ (3 levels deep)
-;    DestinationPathTemplate = \\newserver\*3\*2
-; Explanation: The first three folder names are captured in order ("*X" designates which captured folder name to use):
-;    *1 = userfiles
-;    *2 = [user name]
-;    *3 = docs
-;  Here are some sample file source files and converted files for this example:
-;    \\userfiles\Bob\docs\Personal\Rept1.doc         =>   \\newserver\docs\Bob\Personal\Rept1.docx
-;    \\userfiles\James\docs\New Folder\Schedule.doc  =>   \\newserver\docs\James\New Folder\Schedule.docx
-;    \\userfiles\Cliff\docs\notes.doc                =>   \\newserver\docs\Cliff\notes.docx
-;
-; Please refer to the online documentation for more information and examples.
-
 SourcePathTemplate=*\ 
 DestinationPathTemplate={output_folder}
         """
