@@ -1,6 +1,8 @@
-build/edgar.zip: edgar.py edgar.bat clean
+SOURCES:=edgar.py edgar.bat
+
+build/edgar.zip: $(SOURCES) clean
 	mkdir -p build/edgar
-	cp $^ build/edgar/
+	cp $(SOURCES) build/edgar/
 	cp -r samples/ build/edgar/
 	cp -r venv/lib/python3.5/site-packages/* build/edgar/
 	cp README.md build/edgar/
