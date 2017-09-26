@@ -10,6 +10,7 @@ import csv
 import logging
 import logging.config
 import os
+import platform
 import re
 import sys
 import shutil
@@ -294,7 +295,7 @@ class InputRow:
             self._convert_xls_to_xlsx(working_dir)
 
     def _convert_xls_to_xlsx(self, working_dir: str):
-        if not sys.platform == 'Windows':
+        if not platform.system() == 'Windows':
             raise NotImplementedError(
                 'XLS to XLSX conversion supported only on Windows.')
 
