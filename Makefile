@@ -1,6 +1,7 @@
 SOURCES:=edgar.py edgar.bat
 
 test: $(SOURCES)
+	python3 edgar.py -i example/input_xls.txt -w $(shell mktemp -d) -o $(shell mktemp -d)
 	python3 edgar.py -i example/input.txt -w $(shell mktemp -d) -o $(shell mktemp -d)
 
 build/edgar.zip: $(SOURCES) clean
